@@ -28,6 +28,9 @@ gcloud beta container clusters create $CLUSTER_NAME \
        --enable-autorepair \
        --enable-autoscaling --min-nodes 1 --max-nodes 10 --num-nodes 2
 #end::launch_cluster[]
+#tag::connect_to_cluster[]
+gcloud container clusters get-credentials $CLUSTER_NAME --zone $ZONE
+#end::connect_to_cluster[]
 #tag::delete_cluster[]
 gcloud beta container clusters delete $CLUSTER_NAME --zone $ZONE
 #end::delete_cluster[]
