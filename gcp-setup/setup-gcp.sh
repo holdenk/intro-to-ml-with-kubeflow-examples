@@ -19,7 +19,7 @@ CLUSTER_NAME="ci-cluster"
 #tag::launch_cluster[]
 gcloud beta container clusters create $CLUSTER_NAME \
        --zone $ZONE \
-       --machine-type "n1-standard-4" \
+       --machine-type "n1-standard-8" \
        --disk-type "pd-standard" \
        --disk-size "100" \
        --scopes "https://www.googleapis.com/auth/cloud-platform" \
@@ -34,3 +34,16 @@ gcloud container clusters get-credentials $CLUSTER_NAME --zone $ZONE
 #tag::delete_cluster[]
 gcloud beta container clusters delete $CLUSTER_NAME --zone $ZONE
 #end::delete_cluster[]
+#tag::kfctl_platform[]
+export CLIENT_SECRET=OAUTH_SECRET
+export CLIENT_ID=OAUTH_CLIENT_ID
+KFAPP=Kubeflow_Application_Name # Also used for the cluster & deployment name
+kfctl.sh init ${KFAPP} --platform gcp --project ${GCP_PROJECT}
+pushd ${KFAPP}
+kfctl.sh generate platform
+kfctl.sh apply platform
+#end::kfcl_platform[]
+#end::kfctl_k8s[]
+kfctl.sh generate k8s
+kfctl.sh apply k8s
+#end::kfctl_k8s[]
