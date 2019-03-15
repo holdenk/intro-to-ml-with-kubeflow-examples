@@ -9,6 +9,7 @@ mkdir -p $KUBEFLOW_DIR
 pushd $KUBEFLOW_DIR
 curl https://raw.githubusercontent.com/kubeflow/kubeflow/${KUBEFLOW_TAG}/scripts/download.sh | bash
 # Optionally add the scripts directory to your path to simplify your work
-export PATH=$PATH:$KUBEFLOW_DIR/scripts/
+export PATH=$PATH:${KUBEFLOW_DIR}/scripts/
+echo "export PATH=\$PATH:${KUBEFLOW_DIR}/scripts/" >> ~/.bashrc
 popd
 #end::install[]
