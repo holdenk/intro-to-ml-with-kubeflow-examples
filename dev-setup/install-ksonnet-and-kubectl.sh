@@ -7,8 +7,9 @@ kubeflow_releases_base="https://github.com/ksonnet/ksonnet/releases/download"
 curl -OL "$kubeflow_releases_base/v${KSONNET_VERSION}/ks_${KSONNET_VERSION}_${PLATFORM}_amd64.tar.gz"
 tar zxf "ks_${KSONNET_VERSION}_${PLATFORM}_amd64.tar.gz"
 pwd=$(pwd)
-# Add this + platform/version exports to your bashrc or move the ks bin into /usr/bin
+# Add this to your path in  your bashrc or move the ks bin into /usr/bin
 export PATH=$PATH:"$pwd/ks_0.11.0_${PLATFORM}_amd64"
+echo "export PATH=\$PATH:${pwd}/ks_0.11.0_${PLATFORM}_amd64"
 #end::ksonnet[]
 #tag::ubuntu-kubectl[]
 sudo snap install kubectl --classic
