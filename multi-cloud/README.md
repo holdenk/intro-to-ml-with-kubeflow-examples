@@ -402,12 +402,6 @@ cd $EXAMPLE_SELDON/workflows
 Which will build and push the new docker image as part of the work flow. This workflow
 has a `build-push-image` parameter that will reload the image. You can check that out [here]().
 
-#### Configuring your job to save the results into GCS/S3/etc.
-
-This saves the model results to a persistent-volume-claim, however we can't move this between clouds.
-If you want you can configure an [S3 compatable backend credintals as in the IBM guide](https://github.com/intro-to-ml-with-kubeflow/ibm-install-guide/blob/master/once-cluster-is-up.sh).
-
-
 
 
 ### Ok now monitor it.
@@ -437,6 +431,37 @@ cd $EXAMPLE_SELDON/workflows
 #### Monitor the serving
 
 If you set up the optional seldon analytics...
+
+### Optional: Building a GitHub Issue Summarization Model
+
+Now, a non-zero percentage of came here looking for Tensorflow on Kubeflow.
+One option is to train a TF model for MNist, which also exists in the Seldon examples (just `tf` instead of `sk`).
+
+
+Instead, if you want to go beyond that you can train a GitHub issue summurization model.
+There is a [codelab for it](https://codelabs.developers.google.com/codelabs/cloud-kubeflow-e2e-gis), and [Kubeflow example](https://github.com/kubeflow/examples/tree/master/github_issue_summarization).
+
+#### Creating a Tensorflow training job with Kubeflow
+
+Kubeflow's [tfjob](https://www.kubeflow.org/docs/components/tftraining/) component allows you to easily train Tensorflow jobs.
+
+You can customize this 
+
+
+Once you run this you should see some new pods created:
+
+```
+tfjob-issue-summarization-ps-0                            1/1       Running     0          6m
+tfjob-issue-summarization-worker-0                        1/1       Running     0          6m
+```
+
+#### Serving the Model
+
+#### Configuring your job to save the results into GCS/S3/etc.
+
+This saves the model results to a persistent-volume-claim, however we can't move this between clouds.
+If you want you can configure an [S3 compatable backend credintals as in the IBM guide](https://github.com/intro-to-ml-with-kubeflow/ibm-install-guide/blob/master/once-cluster-is-up.sh).
+
 
 
 ## Starting a new Kubeflow project for Azure/IBM
