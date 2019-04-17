@@ -17,7 +17,7 @@ WITH pr_review_comments AS (
      ) AS comment_positions,
    JSON_EXTRACT(payload, '$.comment.commit_id') AS comment_commit_id,
    JSON_EXTRACT(payload, '$.comment.path') AS comment_file_path
-   FROM `githubarchive.day.2019*`
+   FROM `githubarchive.day.201*`
    WHERE type = "PullRequestReviewCommentEvent"
 ), pr_review_comments_filtered AS (
   SELECT 
