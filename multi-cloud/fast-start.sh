@@ -158,15 +158,19 @@ if [[ -z "$SKIP_AZURE" ]]; then
   AZURE_CLUSTER_NAME=${AZURE_CLUSTER_NAME:="azure-kf-test"}
   echo "Starting up Azure K8s cluster"
   az configure --defaults location=westus
-  kfctl.sh init $AZURE_CLUSTER_NAME --platform azr -V
+  # Get the subscription id
+  SUBSCRIPTION_ID=$(az account show | jq -r ".id")
+  az ad sp create-for-rbac --name ServicePrincipalName | tee -a principal_results
+  AZ_CLIENT_ID=$(cat principal_results | jq -r ".appId")
+  AZ_CLIENT_SECRET=$(cat principal_results | jq -r ".password")
+  AZ_TENANT_ID=$(cat principal_results | jq -r ".tenant")
+
+  kfctl.sh init ${AZURE_CLUSTER_NAME} --platform azure -V --azClientId ${AZ_CLIENT_ID} --azClientSecret ${AZ_CLIENT_SECRET} --azTenantId ${AZ_TENANT_ID} --azSubscriptionId ${SUBSCRIPTION_ID} --azLocation westus --azNodeSize 5
   pushd $AZURE_CLUSTER_NAME
   source env.sh
+  kfctl.sh generate all
+  kfctl.sh apply all
   az group exists -n kf-westus || az group create -n kf-westus
-  az aks show -g kf-westus -n $AZURE_CLUSTER_NAME || az aks create --name $AZURE_CLUSTER_NAME \
-							--resource-group kf-westus \
-							--node-count 2 \
-							--ssh-key-value ~/.ssh/id_rsa.pub \
-							--node-osdisk-size 30 &
 fi
 
 echo "Creating SA creds now that platform has settled"
