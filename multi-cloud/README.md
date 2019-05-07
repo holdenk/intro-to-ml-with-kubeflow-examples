@@ -176,16 +176,19 @@ You should see a variety of things deployed including the ambassador in the Kube
 kubeflow             deployment.apps/ambassador                                 3         3         3            3           19h
 ```
 
-### Connecting to your Kubeflow Ambassador
+### Connecting to your Kubeflow Web UI
 
 The Kubeflow Ambassador gives you a nice web UI with which you can access many of Kubeflow's components.
-Normally on GCP you'd set up Kubeflow in IAP mode which would give you easy access to the ambassador.
+Kubeflow automatically deploys a load balancer for the ambassador at `https://<deployment_name>.endpoints.<project>.cloud.goog/`
+This can take up to 25 minutes to come up :(
 
-Since we're in a hurry today though we'll use port forwarding and the cloudshell web preview which is also pretty cool.
+Since we're in a hurry today though we'll use port forwarding and the cloudshell web preview which is also pretty cool to take a look at the Jupyter notebook UI.
 
 ```bash
-kubectl port-forward svc/ambassador -n kubeflow 8080:80 &
+kubectl port-forward svc/jupyter -n kubeflow 8080:80 &
 ```
+
+**Note** On other platform deployments you could use kubectl port-forward to access the ambassador UI, but since we redirect to https automatically on GCP that won't work you'll need to wait for the load balancer to be deployed.
 
 The cloudshell web preview button looks like and should be at the top of your cloudshell web interface
 

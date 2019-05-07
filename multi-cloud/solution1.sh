@@ -32,8 +32,9 @@ kfctl.sh apply k8s
 echo "Let's look at what's running:"
 kubectl get all --all-namespaces
 
-echo "Connecting to your kubeflow ambassador"
+echo "Connecting to your kubeflow Jupyter note books"
 echo "Step 1) Setting up port forwarding"
-kubectl port-forward svc/ambassador -n kubeflow 8080:80 &
+kubectl port-forward svc/jupyter -n kubeflow 8080:80 &
 echo "Now it's your turn to launch the cloudshell web preview to port 8080"
+echo "In ~20 minutes you should be able to access the webui at https://${G_KF_APP}.endpoints.${GOOGLE_PROJECT}.cloud.goog/"
 

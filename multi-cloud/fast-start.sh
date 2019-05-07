@@ -14,7 +14,9 @@ source helper.sh
 
 
 if [[ ! -z "$ENABLE_AZURE" ]]; then
-  export IF_AZURE="& Azure"
+  IF_AZURE="& Azure"
+else
+  SKIP_AZURE="1"
 fi
 
 set +x
@@ -51,10 +53,16 @@ export KF_SCRIPTS=$KUBEFLOW_SRC/scripts
 export PATH=$PATH:$KF_SCRIPTS
 export KUBEFLOW_USERNAME=kf
 export KUBEFLOW_PASSWORD=awesome
+export KFCTL_RELEASE_BASE=https://github.com/kubeflow/kubeflow/releases/download/
 if [ ! -d ~/kf ]; then
   mkdir -p $KUBEFLOW_SRC
   pushd $KUBEFLOW_SRC
   curl https://raw.githubusercontent.com/kubeflow/kubeflow/${KUBEFLOW_TAG}/scripts/download.sh | bash
+  mkdir -p $KUBEFLOW_SRC
+  pushd scripts
+  wget ${KFCTL_RELEASE_BASE}${KUBEFLOW_TAG}/kfctl_${KUBEFLOW_TAG}_linux.tar.gz
+  tar -xvf kfctl_${KUBEFLOW_TAG}_linux.tar.gz
+  popd
   echo "export PATH=\$PATH:$KF_SCRIPTS" >> ~/.bashrc
   popd
 fi
@@ -136,29 +144,24 @@ export G_KF_APP=${G_KF_APP:="g-kf-app"}
 export ZONE=${ZONE:="us-central1-a"}
 export GZONE=$ZONE
 echo "export G_KF_APP=$G_KF_APP" >> ~/.bashrc
-kfctl.sh init ${G_KF_APP} --platform gcp --use_basic_auth -V
+kfctl init ${G_KF_APP} --platform gcp --project ${GOOGLE_PROJECT} --use_basic_auth -V
 pushd ${G_KF_APP}
-source env.sh
-# This is a hack, the KF 0.5 scripts still require this :(
-if [[ -z "$CLIENT_ID" ]]; then
-  export CLIENT_ID=${CLIENT_ID:="fake_client_id"}
-  export CLIENT_SECRET=${CLIENT_SECRET:="fake_client_secret"}
-  export SKIP_IAP="true"
-fi
 
-kfctl.sh generate all -V --zone $GZONE
-echo "Waiting on enabling just to avoid race conditions"
-wait $gke_api_enable_pid || echo "Services already enabled"
+kfctl generate all -V --zone $GZONE
 echo "Apply the platform. Sometimes the deployment manager behaves weirdly so retry"
-kfctl.sh apply all -V || (echo "retrying platform application" && kfctl.sh apply all -V) || (echo "Platform application failed" && exit 1)
-echo "Platform applied."
+kfctl apply all -V || (echo "retrying platform application" && kfctl apply all -V) || (echo "Platform application failed" && exit 1)
+echo "Platform & k8s applied."
+gcloud container clusters get-credentials ${G_KF_APP} --zone ${GZONE} --project ${GOOGLE_PROJECT}
 popd
 
 if [[ -z "$SKIP_AZURE" ]]; then
+  AZURE_CLUSTER_NAME=${AZURE_CLUSTER_NAME:="azure-kf-test"}
   echo "Starting up Azure K8s cluster"
   az configure --defaults location=westus
+  kfctl.sh init $AZURE_CLUSTER_NAME --platform azr -V
+  pushd $AZURE_CLUSTER_NAME
+  source env.sh
   az group exists -n kf-westus || az group create -n kf-westus
-  AZURE_CLUSTER_NAME=${AZURE_CLUSTER_NAME:="azure-kf-test"}
   az aks show -g kf-westus -n $AZURE_CLUSTER_NAME || az aks create --name $AZURE_CLUSTER_NAME \
 							--resource-group kf-westus \
 							--node-count 2 \
