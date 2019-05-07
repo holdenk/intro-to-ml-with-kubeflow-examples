@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# First look at solution7[platform].sh where [platform] is the second cloud you want to try
+
 # Adding hacky transporter for moving model from GCP to IBMCloud
 
 gcloud auth configure-docker
