@@ -1,16 +1,9 @@
 #!/usr/bin/env bash
 
+## Install Argo
+curl -sSL -o ~/argo https://github.com/argoproj/argo/releases/download/v2.2.1/argo-linux-amd64
+chmod +x ~/argo
+kubectl create clusterrolebinding sa-admin --clusterrole=cluster-admin --serviceaccount=kubeflow:default
 cd ~/
-git clone https://github.com/kubeflow/example-seldon
-
-kubectl create -f https://raw.githubusercontent.com/intro-to-ml-with-kubeflow/intro-to-ml-with-kubeflow-examples/master/multi-cloud/config/pv-claim.yaml
-
-echo "Hey friends, you get to edit YAML now, sorry."
-read -r panda
-
-## The `-p build-push-image=true` doesn't work unless you have your own docker
-## credentials stored in a K8s secret. Instead if you made a custom docker image you
-## can look at solution4b.sh
-
-cd example-seldon/workflows
-argo submit training-sk-mnist-workflow.yaml -n kubeflow -p build-push-image=false
+PATH=$(pwd):$PATH
+export PATH
