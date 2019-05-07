@@ -123,13 +123,50 @@ source ~/.bashrc
 
 * Download Kubeflow and it dependencies
 * Download Google & Azure's command line tools (if needed)
-* Enable various components in
-* Set up a GKE and EKS cluster (named google-kf-test & azure-kf-test)
-* Creates your first Kubeflow App on GKE with some special customizations to avoid waiting for certificate provissioning
+* Enable various components in Google
+
 
 At that point it's going to be on you to start your Kubeflow adventure!
 
 **Note:** Look up to see how to cleanup, in case you run into problems. tl;dr The [cleanup script is at https://github.com/intro-to-ml-with-kubeflow/intro-to-ml-with-kubeflow-examples/blob/master/multi-cloud/cleanup.sh](https://github.com/intro-to-ml-with-kubeflow/intro-to-ml-with-kubeflow-examples/blob/master/multi-cloud/cleanup.sh).
+
+
+
+### Creating your Kubeflow GKE cluster
+
+Kubeflow has a commandline tool we can use to provision all of the required components for Kubeflow. The new version of this tool is called `kfctl` and the old version is a shell script `kfctl.sh`. For GKE we will use `kfctl`, but when working with Azure and IBM we'll use the older `kfctl.sh` for platform support.
+
+
+To generate your kubeflow cluster and all of the required deployments you can run:
+
+```bash
+kfctl init ${G_KF_APP} --platform gcp --project ${GOOGLE_PROJECT} --use_basic_auth -V
+```
+
+This makes a directory with the kubeflow settings inside of it, we then go inside to generate and apply:
+
+```bash
+cd ${G_KF_APP}
+kfctl generate all -V --zone $GZONE
+kfctl apply all -V # Sometimes fails re-run if so
+```
+
+Now that we've generated our K8s cluster we can connect to it with:
+
+```bash
+gcloud container clusters get-credentials ${G_KF_APP} --zone ${GZONE} --project ${GOOGLE_PROJECT}
+```
+
+Now, later on, we're going to pull custom docker images from our container registry so we'll need to add some extra permissions:
+
+```bash
+export SERVICE_ACCOUNT=user-gcp-sa
+export SERVICE_ACCOUNT_EMAIL=${SERVICE_ACCOUNT}@${GOOGLE_PROJECT}.iam.gserviceaccount.com
+echo "Make sure the GCP user SA has storage admin for fulling from GCR"
+gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT}" --member \
+       "serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+       --role=roles/storage.admin || echo "Skipping changing SA since doesn't exist"
+```
 
 #### Alternatives
 
@@ -138,9 +175,6 @@ There is also [Kubeflow's click to deploy interface](https://deploy.kubeflow.clo
 
 In addition to generating K8s configurations, Kubeflow also has the tools (for some platforms) to generate all of the ancillary configuration (enabling services, creating a K8s cluster, etc.).
 
-
-`fast-start.sh` takes advantage of  `kfctl.sh` GCP platform generation and manually disables IAP mode.
-For now the Azure resources are created manually inside of fast-start, but Azure has been added as a supported platform to `kfctl` in the master branch of Kubeflow.
 
 ### Loading your Kubeflow application
 
@@ -198,11 +232,8 @@ The default port should be 8080 which is the correct one, but you change it if n
 
 ![image of cloudhsell port selection](./imgs/webpreview_w_port.png)
 
-Now you can launch web preview and you should get the Kubeflow Ambassador page which looks something like:
 
-![Image of Ambassador Web UI](./imgs/kf_ambassador.png)
-
-
+Now you should see Jupyter! :)
 
 
 ### Adding components to your Kubeflow application

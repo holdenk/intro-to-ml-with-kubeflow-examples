@@ -144,61 +144,7 @@ export G_KF_APP=${G_KF_APP:="g-kf-app"}
 export ZONE=${ZONE:="us-central1-a"}
 export GZONE=$ZONE
 echo "export G_KF_APP=$G_KF_APP" >> ~/.bashrc
-kfctl init ${G_KF_APP} --platform gcp --project ${GOOGLE_PROJECT} --use_basic_auth -V
-pushd ${G_KF_APP}
 
-kfctl generate all -V --zone $GZONE
-echo "Apply the platform. Sometimes the deployment manager behaves weirdly so retry"
-kfctl apply all -V || (echo "retrying platform application" && kfctl apply all -V) || (echo "Platform application failed" && exit 1)
-echo "Platform & k8s applied."
-gcloud container clusters get-credentials ${G_KF_APP} --zone ${GZONE} --project ${GOOGLE_PROJECT}
-popd
-
-echo "Creating SA creds now that platform has settled"
-echo "Setting up a GCP-SA for storage"
-export SERVICE_ACCOUNT=user-gcp-sa
-export SERVICE_ACCOUNT_EMAIL=${SERVICE_ACCOUNT}@${GOOGLE_PROJECT}.iam.gserviceaccount.com
-export STORAGE_SERVICE_ACCOUNT=user-gcp-sa-storage
-export STORAGE_SERVICE_ACCOUNT_EMAIL=${STORAGE_SERVICE_ACCOUNT}@${GOOGLE_PROJECT}.iam.gserviceaccount.com
-export KEY_FILE=${HOME}/secrets/${STORAGE_SERVICE_ACCOUNT_EMAIL}.json
-
-if [ ! -f "${KEY_FILE}" ]; then
-  echo "Creating GCP SA storage account"
-  echo "
-export STORAGE_SERVICE_ACCOUNT=user-gcp-sa-storage
-export STORAGE_SERVICE_ACCOUNT_EMAIL=${STORAGE_SERVICE_ACCOUNT}@${GOOGLE_PROJECT}.iam.gserviceaccount.com
-" >> ~/.bashrc
-  gcloud iam service-accounts create ${STORAGE_SERVICE_ACCOUNT} \
-	 --display-name "GCP Service Account for use with kubeflow examples" || echo "SA exists, just modifying"
-
-  gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT}" --member \
-	 "serviceAccount:${STORAGE_SERVICE_ACCOUNT_EMAIL}" \
-	 --role=roles/storage.admin
-  gcloud iam service-accounts keys create "${KEY_FILE}" \
-	 --iam-account "${STORAGE_SERVICE_ACCOUNT_EMAIL}"
-else
-	echo "using existing GCP storage SA"
-fi
-
-echo "Make sure the GCP user SA has storage admin for fulling from GCR"
-gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT}" --member \
-       "serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-       --role=roles/storage.admin || echo "Skipping changing SA since doesn't exist"
-
-
-gcloud container clusters get-credentials ${G_KF_APP} --zone $GZONE
-# Upload the SA creds for storage access
-kubectl create secret generic user-gcp-sa-storage \
-  --from-file=user-gcp-sa.json="${KEY_FILE}"
-
-if [ ! -d ${G_KF_APP} ]; then
-  echo "No KF app, re-run fast-start.sh?"
-  exit 1
-  if [ ! -d ${G_KF_APP}/ks_app ]; then
-    echo "ksonnet components not generated? please check."
-    exit 1
-  fi
-fi
 
 echo "export PATH=~/:\$PATH" >> ~/.bashrc
 

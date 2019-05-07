@@ -23,11 +23,20 @@ echo "OK... That seemed to go well."
 
 echo "Setting up kubeflow project"
 export G_KF_APP=${G_KF_APP:="g-kf-app"}
-pushd $G_KF_APP
-source env.sh
-# Normally we would have done platform & k8s generate/apply as well
+kfctl init ${G_KF_APP} --platform gcp --project ${GOOGLE_PROJECT} --use_basic_auth -V
 
-kfctl.sh apply k8s
+pushd $G_KF_APP
+kfctl generate all -V --zone $GZONE
+kfctl apply all -V # Sometimes fails re-run if so
+
+# Add extra permissions
+export SERVICE_ACCOUNT=user-gcp-sa
+export SERVICE_ACCOUNT_EMAIL=${SERVICE_ACCOUNT}@${GOOGLE_PROJECT}.iam.gserviceaccount.com
+echo "Make sure the GCP user SA has storage admin for fulling from GCR"
+gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT}" --member \
+       "serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+       --role=roles/storage.admin || echo "Skipping changing SA since doesn't exist"
+
 
 echo "Let's look at what's running:"
 kubectl get all --all-namespaces
