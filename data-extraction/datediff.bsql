@@ -1,0 +1,50 @@
+WITH pr_review_comments AS (
+  SELECT *,
+   -- Initial JSON extraction of the fields we care about
+   PARSE_DATE("%F", REGEXP_EXTRACT(JSON_EXTRACT(payload, '$.comment.created_at'), r"(\d*-\d*-\d*)")) as created_date,
+   JSON_EXTRACT(payload, '$.comment.user.login') as comment_user,
+   JSON_EXTRACT(payload, '$.pull_request.user.login') as comment_pr_user,
+   -- Back in 2014 we didn't have the action, let's assume its created because that's "good enough"
+   IFNULL(JSON_EXTRACT(payload, '$.action'), "created") AS action,
+   -- 2014 format change where the pull request URL is stored, and subsequent fields
+   IFNULL(JSON_EXTRACT(payload, '$.pull_request.url'), 
+          JSON_EXTRACT(payload, '$.comment.pull_request_url')) AS pull_request_url,
+   SUBSTR(IFNULL(JSON_EXTRACT(payload, '$.diff_hunk'),
+          JSON_EXTRACT(payload, '$.comment.diff_hunk')), 0, 40000) AS diff_hunk,
+   JSON_EXTRACT(payload, '$.pull_request.patch_url') AS pull_patch_url,
+   -- Note these may be null, but at least one of them should be not null
+   STRUCT<original_position INT64, new_position INT64>
+     ( CAST(JSON_EXTRACT(payload, '$.comment.original_position') as INT64),
+      CAST(JSON_EXTRACT(payload, '$.comment.position') as INT64)
+     ) AS comment_positions,
+   JSON_EXTRACT(payload, '$.comment.commit_id') AS comment_commit_id,
+   JSON_EXTRACT(payload, '$.comment.path') AS comment_file_path
+   -- TODO: get the user
+   -- TODO: get the comment text
+   FROM `githubarchive.day.2018*`
+   WHERE type = "PullRequestReviewCommentEvent"
+), pr_review_comments_filtered AS (
+  SELECT
+  *
+  FROM pr_review_comments
+  -- Try and filter out CI/bots
+  WHERE NOT REGEXP_CONTAINS(LOWER(comment_user), r"(.*bot|.*\[bot\].*|.*-bot.*|.*jenkins.*|.*travis.*|.*ci|.*-ci.*|.*prowel.*|.*robot.*|.*verifier.*)(\"|)$") 
+  -- filter out self comments
+  AND comment_user != comment_pr_user
+), pr_comments AS (SELECT 
+ pull_request_url,
+ ANY_VALUE(created_date) as created_date
+ FROM pr_review_comments_filtered
+ GROUP BY pull_request_url ),
+ prs as (SELECT 
+    JSON_EXTRACT(payload, '$.pull_request.url') as pull_request_url,
+    JSON_EXTRACT(payload, '$.pull_request.user.login') as pr_user,
+    PARSE_DATE("%F", REGEXP_EXTRACT(JSON_EXTRACT(payload, '$.pull_request.created_at'), r"(\d*-\d*-\d*)")) as pr_creation_date
+   FROM `githubarchive.day.2018*`
+   WHERE type = "PullRequestEvent"), joined_times AS(
+-- SELECT * from pr_review_comments_filtered LIMIT 5
+-- Find top users quick and dirty
+-- SELECT comment_user, count(*) as comment_count FROM pr_review_comments_filtered GROUP BY(comment_user) ORDER BY comment_count DESC
+SELECT * from prs INNER JOIN pr_comments USING(pull_request_url) -- For now we only look at things with reviewers
+), diffs as (SELECT ABS(date_diff(pr_creation_date, created_date, DAY)) as day_diff FROM joined_times)
+  SELECT day_diff, count(*) as num_prs FROM diffs GROUP BY(day_diff)
