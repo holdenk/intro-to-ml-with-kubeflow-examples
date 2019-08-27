@@ -16,9 +16,9 @@ WITH pr_review_comments AS (
       CAST(JSON_EXTRACT(payload, '$.comment.position') as INT64)
      ) AS comment_positions,
    JSON_EXTRACT(payload, '$.comment.commit_id') AS comment_commit_id,
-   JSON_EXTRACT(payload, '$.comment.path') AS comment_file_path
+   JSON_EXTRACT(payload, '$.comment.path') AS comment_file_path,
    -- TODO: get the user
-   -- TODO: get the comment text
+   IFNULL(JSON_EXTRACT(payload, '$.comment.body'), "") as comment_text
    FROM `githubarchive.day.201*`
    WHERE type = "PullRequestReviewCommentEvent"
 ), pr_review_comments_filtered AS (
@@ -26,7 +26,7 @@ WITH pr_review_comments AS (
   *
   FROM pr_review_comments
   -- Filter out diffs which are too large for us to care about, they're "probably" binary
-  WHERE length(diff_hunk) < 40000
+  WHERE length(diff_hunk) < 40000 AND REGEXP_CONTAINS(comment_file_path, "\\.py\"") 
 ) SELECT 
  pull_request_url,
  ANY_VALUE(pull_patch_url) as pull_patch_url,
